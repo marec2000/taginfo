@@ -14,7 +14,7 @@
 #include <tpropertymap.h>
 
 #define VERSION_MAJOR 1
-#define VERSION_MINOR 0
+#define VERSION_MINOR 1
 
 const char *author = "Markus Reckwerth";
 const int copyyear = 2018;
@@ -168,11 +168,28 @@ int main(int argc, char *argv[])
         int hours = (properties->lengthInMilliseconds() - millisecs - seconds * 1000 - minutes * 60000) / 3600000;
 
         int rseconds = seconds;
-        if (millisecs > 500) {
+        int rminutes = minutes;
+        int rhours = hours;
+
+	if (millisecs > 500) {
           rseconds++;
         }
-        int rminutes = (properties->lengthInMilliseconds() - millisecs - rseconds * 1000) / 60000 % 60;
-        int rhours = (properties->lengthInMilliseconds() - millisecs - rseconds * 1000 - rminutes * 60000) / 3600000;
+
+        if (rseconds > 59) {
+	  rseconds = rseconds % 60;
+          rminutes++;
+        }
+
+        if (rminutes > 59) {
+	  rminutes = rminutes % 60;
+          rhours++;
+        }
+
+        if (rhours > 99) {
+	  char errstr[0];
+          sprintf(errstr, "track duration of file \"%s\" is too long", argv[i]);
+          print_error(errstr);
+        }
 
       	printf("\naudio stream info\n=================\n");
 
