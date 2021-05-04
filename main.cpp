@@ -24,7 +24,7 @@
 #endif
 
 #define VERSION_MAJOR 1
-#define VERSION_MINOR 2
+#define VERSION_MINOR 3
 
 const char *author = "Markus Reckwerth";
 const int copyyear = 2021;
@@ -46,7 +46,7 @@ static void print_help (char* pname)
 
 static void print_version (char *pname)
 {
-  printf("%s v%i.%i | (c) %i %s\n", pname, VERSION_MAJOR, VERSION_MINOR, copyyear, author);
+  printf("%s v%i.%i [taglib v%i.%i] | (c) %i %s\n", pname, VERSION_MAJOR, VERSION_MINOR, TAGLIB_MAJOR_VERSION, TAGLIB_MINOR_VERSION, copyyear, author);
   exit(EXIT_SUCCESS);
 }
 
