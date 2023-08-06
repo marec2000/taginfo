@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <fileref.h>
+#include <id3v1genres.h>
 #include <tag.h>
 #include <tpropertymap.h>
 
@@ -24,10 +25,10 @@
 #endif
 
 #define VERSION_MAJOR 1
-#define VERSION_MINOR 3
+#define VERSION_MINOR 4
 
 const char *author = "Markus Reckwerth";
-const int copyyear = 2021;
+const int copyyear = 2023;
 
 using namespace std;
 #ifdef ID3_LEGACY_GENRE_SUPPORT
@@ -37,16 +38,16 @@ using namespace TagLib;
 static void print_help (char* pname)
 {
 #ifdef ID3_LEGACY_GENRE_SUPPORT
-  printf("usage: %s [options] <file> ...\n\noptions:\n\t-a\tshow audio stream info\n\t-b\tshow basic tag info\n\t-c\tshow codec specific tag info (default)\n\t-h\tprint help\n\t-l\tshow legacy id3v1 values\n\t-v\tprint version\n", pname);
+  printf("usage: %s [options] <file> ...\n\noptions:\n\t-a\tshow audio stream info\n\t-b\tshow basic tag info\n\t-c\tshow codec specific tag info (default)\n\t-g\tprint id3v1 genre list\n\t-h\tprint help\n\t-l\tshow legacy id3v1 values\n\t-v\tprint version\n", pname);
 #else
-  printf("usage: %s [options] <file> ...\n\noptions:\n\t-a\tshow audio stream info\n\t-b\tshow basic tag info\n\t-c\tshow codec specific tag info (default)\n\t-v\tprint version\n", pname);
+  printf("usage: %s [options] <file> ...\n\noptions:\n\t-a\tshow audio stream info\n\t-b\tshow basic tag info\n\t-c\tshow codec specific tag info (default)\n\t-g\tprint id3v1 genre list\n\t-h\tprint help\n\t-v\tprint version\n", pname);
 #endif
   exit(EXIT_SUCCESS);
 }
 
 static void print_version (char *pname)
 {
-  printf("%s v%i.%i [taglib v%i.%i] | (c) %i %s\n", pname, VERSION_MAJOR, VERSION_MINOR, TAGLIB_MAJOR_VERSION, TAGLIB_MINOR_VERSION, copyyear, author);
+  printf("%s v%i.%i [taglib v%i.%i.%i] | (c) %i %s\n", pname, VERSION_MAJOR, VERSION_MINOR, TAGLIB_MAJOR_VERSION, TAGLIB_MINOR_VERSION, TAGLIB_PATCH_VERSION, copyyear, author);
   exit(EXIT_SUCCESS);
 }
 
@@ -77,20 +78,20 @@ static char* get_ancient_genre_name (const char* genre_name)
   static const int genreMapSize = sizeof(genreMap) / sizeof(genreMap[0]);
   for(int i = 0; i < genreMapSize; ++i) {
     if (strcmp(genre_name,genreMap[i].actual_genre) == 0)
-      return (char *) genreMap[i].ancient_genre;
+      return (char*) genreMap[i].ancient_genre;
   }
 
-  return (char *) genre_name;
+  return (char*) genre_name;
 }
 #endif
 
 int main(int argc, char *argv[])
 {
   int opt;
-  int flags=0;
   int a_flag=0;
   int b_flag=0;
   int c_flag=0;
+  int g_flag=0;
 #ifdef ID3_LEGACY_GENRE_SUPPORT
   int l_flag=0;
 #endif
@@ -98,27 +99,29 @@ int main(int argc, char *argv[])
   char *progname = basename(argv[0]);
 
 #ifdef ID3_LEGACY_GENRE_SUPPORT
-  const char *genre_name;
+  char *genre_name;
 #endif
   char *loc = setlocale(LC_CTYPE,"");
   bool isUTF8 = (strstr(loc,"UTF-8") != NULL);
 
   // loop through arguments
 #ifdef ID3_LEGACY_GENRE_SUPPORT
-  while ((opt = getopt(argc, argv, "abchlv")) != -1) {
+  while ((opt = getopt(argc, argv, "abcghlv")) != -1) {
 #else
-  while ((opt = getopt(argc, argv, "abchv")) != -1) {
+  while ((opt = getopt(argc, argv, "abcghv")) != -1) {
 #endif
     switch (opt) {
       case 'a':
         a_flag=1;
-        flags++;
         break;
       case 'b':
         b_flag=1;
         break;
       case 'c':
         c_flag=1;
+        break;
+      case 'g':
+        g_flag=1;
         break;
       case 'h':
         print_help(progname);
@@ -132,6 +135,27 @@ int main(int argc, char *argv[])
         default:
           exit(EXIT_FAILURE);
     }
+  }
+
+  // print genre list and exit
+  if (g_flag) {
+    int gl_size=TagLib::ID3v1::genreList().size();
+
+    printf("\ngenre list\n==========\n");
+    for(int i = 0; i < gl_size; i++) {
+#ifdef ID3_LEGACY_GENRE_SUPPORT
+      if (l_flag) {
+         strcpy(genre_name,get_ancient_genre_name(TagLib::ID3v1::genre(i).toCString(isUTF8)));
+       }
+       else {
+         strcpy(genre_name,(char*) TagLib::ID3v1::genre(i).toCString(isUTF8));
+       }
+       printf("(%.3i) %s\n",i,genre_name);
+#else
+      printf("(%.3i) %s\n",i,TagLib::ID3v1::genre(i).toCString(isUTF8));
+#endif
+    }
+    exit(EXIT_SUCCESS);
   }
 
   // check arguments
@@ -183,10 +207,10 @@ int main(int argc, char *argv[])
         }
 #ifdef ID3_LEGACY_GENRE_SUPPORT
         if (l_flag && ((id3v1tag) || (id3v2tag))) {
-          genre_name = get_ancient_genre_name(tag->genre().toCString(isUTF8));
+          strcpy(genre_name,get_ancient_genre_name(tag->genre().toCString(isUTF8)));
         }
         else {
-          genre_name = tag->genre().toCString(isUTF8);
+          strcpy(genre_name,(char*) tag->genre().toCString(isUTF8));
         }
         printf("genre      : \"%s\"\n",genre_name);
 #else
@@ -231,7 +255,7 @@ int main(int argc, char *argv[])
                 genre_name = get_ancient_genre_name((*j).toCString(isUTF8));
               }
 	      else {
-                genre_name = (*j).toCString(isUTF8);
+                genre_name = (char*) (*j).toCString(isUTF8);
 	      }
               printf("%-*s : \"%s\"\n",longest,i->first.toCString(isUTF8),genre_name);
 #else
